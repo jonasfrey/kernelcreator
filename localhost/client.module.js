@@ -7,32 +7,12 @@ import {
 } from "https://deno.land/x/f_add_css@2.0.0/mod.js"
 
 import {
-    f_o_html__and_make_renderable,
-}from 'https://deno.land/x/f_o_html_from_o_js@5.0.0/mod.js'
+    f_o_html_from_o_js,
+    f_o_proxified_and_add_listeners, 
+    f_o_shader_info_and_compile_shader
+} from "https://deno.land/x/handyhelpers@5.1.97/mod.js"
 
-let o_mod_notifire = await import('https://deno.land/x/f_o_html_from_o_js@5.0.0/localhost/jsh_modules/notifire/mod.js');
 
-import {
-    f_o_webgl_program,
-    f_delete_o_webgl_program,
-    f_resize_canvas_from_o_webgl_program,
-    f_render_from_o_webgl_program
-} from "https://deno.land/x/handyhelpers@5.0.0/mod.js"
-
-import {
-    f_s_hms__from_n_ts_ms_utc,
-} from "https://deno.land/x/date_functions@2.0.0/mod.js"  
-
-let a_o_shader = []
-let n_idx_a_o_shader = 0;
-let o_state = {
-    o_shader: {},
-    o_state_notifire: {},
-    n_idx_a_o_shader,
-    a_o_shader,
-}
-
-globalThis.o_state = o_state
 o_variables.n_rem_font_size_base = 1. // adjust font size, other variables can also be adapted before adding the css to the dom
 o_variables.n_rem_padding_interactive_elements = 0.5; // adjust padding for interactive elements 
 f_add_css(
@@ -64,252 +44,231 @@ f_add_css(
     `
 );
 
-// it is our job to create or get the cavas
-let o_canvas = document.createElement('canvas'); // or document.querySelector("#my_canvas");
-document.body.appendChild(o_canvas);
 
-
-let o_webgl_program = null;
-let f_update_shader = function(){
-
-    if(o_webgl_program){
-        f_delete_o_webgl_program(o_webgl_program)
+let f_callback_beforevaluechange = function(a_s_path, v_old, v_new){
+    console.log('a_s_path')
+    console.log(a_s_path)
+    let s_path = a_s_path.join('.');
+    if(s_path == 'a_o_person.0.s_name'){
+        console.log('name of first person will be changed')
     }
-    o_webgl_program = f_o_webgl_program(
-        o_canvas,
-        `#version 300 es
-        in vec4 a_o_vec_position_vertex;
-        void main() {
-            gl_Position = a_o_vec_position_vertex;
-        }`, 
-        `#version 300 es
+}
+let f_callback_aftervaluechange = function(a_s_path, v_old, v_new){
+    console.log('a_s_path')
+    console.log(a_s_path)
+    let s_path = a_s_path.join('.');
+    if(s_path == 'a_o_person.0.s_name'){
+        console.log('name of first person has been changed')
+    }
+}
+//webglstuff
+// f_o_shader_info_and_compile_shader
+
+
+// WebGL context
+let o_canvas = document.createElement('canvas');
+let o_gl = o_canvas.getContext('webgl');
+
+// Shader sources
+let s_vertex_shader_source = `
+    attribute vec4 a_position;
+    void main() {
+        gl_Position = a_position;
+    }
+`;
+
+let s_fragment_shader_source = `
+    precision mediump float;
+    void main() {
+        gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0); // Red color
+    }
+`;
+
+let a_o_shader_program = [
+    {
+        s_name: "simple_one_texture_display_shader", 
+        a_s_uniform: [
+            'o_scl_canvas', 
+            'n_b_mouse_down_left',
+            'n_b_mouse_down_middle',
+            'n_b_mouse_down_right',
+            'o_trn_mouse', 
+            'o_scl_texture1', 
+            'o_texture1',
+        ], 
+        s_fragment_shader_source: `
         precision mediump float;
-        in vec2 o_trn_nor_pixel;
-        out vec4 fragColor;
-        uniform vec4 iMouse;
-        uniform float iTime;
-        uniform vec2 iResolution;
-        uniform vec4 iDate;
-    
+        varying vec2 v_texCoord;
+        uniform sampler2D o_texture1;
+        uniform vec2 o_scl_canvas;
+        uniform vec2 o_scl_texture1;
+        uniform float n_b_mouse_down_left;
+        uniform float n_b_mouse_down_middle;
+        uniform float n_b_mouse_down_right;
+        uniform vec2 o_trn_mouse;
+        uniform float n_b_invert;
+        uniform float n_b_mirror_vertical;
+        uniform float n_b_mirror_horizontal;
+        uniform float n_b_mirror_diagonal;
+        
+        void main() {
+            vec2 texelSize = 1.0 / o_scl_texture1;
+            vec2 modifiedTexCoord = v_texCoord;
+        
+            // Apply reflection/mirroring based on the boolean flags
+            if (n_b_mirror_vertical == 1.0) {
+                // Reflect on y-axis (vertical symmetry)
+                modifiedTexCoord.x = abs(modifiedTexCoord.x - 0.5) * 2.0;
+            }
+            if (n_b_mirror_horizontal == 1.0) {
+                // Reflect on x-axis (horizontal symmetry)
+                modifiedTexCoord.y = abs(modifiedTexCoord.y - 0.5) * 2.0;
+            }
+            if (n_b_mirror_diagonal == 1.0) {
+                // Mirror on diagonal axis (swap and reflect)
+                modifiedTexCoord.xy = abs(modifiedTexCoord.yx - 0.5) * 2.0;
+            }
+            vec4 color = vec4(0.0);
+            color = texture2D(o_texture1, modifiedTexCoord  * texelSize);
+        
+            // Simple box filter for downsampling
+            // for (int x = -1; x <= 1; x++) {
+            //     for (int y = -1; y <= 1; y++) {
+            //         color += texture2D(o_texture1, modifiedTexCoord + vec2(x, y) * texelSize);
+            //     }
+            // }
+        
+            // vec4 o_col = color / 9.0;
+            vec4 o_col = color;
+        
+            if (n_b_invert == 1.0) {
+                o_col.rgb = 1.0 - o_col.rgb; // Invert colors
+            }
+        
+            gl_FragColor = o_col; // Output the final color
+        }
+        `, 
+        s_vertex_shader_source: `
+        attribute vec4 a_position;
+        varying vec2 v_texCoord;
 
         void main() {
-            float n_scl_min = min(iResolution.x, iResolution.y);
-            vec2 o_trn = (gl_FragCoord.xy-iResolution.xy*.5)/n_scl_min;
-            float n = length(o_trn);
-            float na = atan(o_trn.x, o_trn.y);
-            fragColor = vec4(
-                sin(n*18.6+iTime+sin(na*3.)),
-                sin(n*19.2+iTime+sin(na*3.)),
-                sin(n*19.8+iTime+sin(na*3.)),
-                sin(n*18.+iTime+na)
-            );
+            gl_Position = a_position;
+            v_texCoord = a_position.xy * 0.5 + 0.5;
         }
-        `
-    )
-    
-    o_state.o_ufloc__iResolution = o_webgl_program?.o_ctx.getUniformLocation(o_webgl_program?.o_shader__program, 'iResolution');
-    o_state.o_ufloc__iDate = o_webgl_program?.o_ctx.getUniformLocation(o_webgl_program?.o_shader__program, 'iDate');
-    o_state.o_ufloc__iMouse = o_webgl_program?.o_ctx.getUniformLocation(o_webgl_program?.o_shader__program, 'iMouse');
-    o_state.o_ufloc__iTime = o_webgl_program?.o_ctx.getUniformLocation(o_webgl_program?.o_shader__program, 'iTime');
+        `,
+        o_info_vertex: null, 
+        o_info_fragment: null, 
+        o_program_shader: null,
+    }
+]
 
-    f_resize()
-}
+for(let o_shader_program of a_o_shader_program){
+    o_shader_program.o_info_vertex = f_o_shader_info_and_compile_shader(
+        'vertex', 
+        o_shader_program.s_vertex_shader_source, 
+        o_gl
+    );
+    if(o_shader_program?.o_info_vertex?.a_o_shader_error?.length > 0){
+        console.error(o_shader_program?.o_info_vertex?.a_o_shader_error)
+        throw new Error("shader could not compile, has errors!");
+    }
+    o_shader_program.o_info_fragment = f_o_shader_info_and_compile_shader(
+        'fragment', 
+        o_shader_program.s_fragment_shader_source, 
+        o_gl
+    );
+    if(o_shader_program?.o_info_fragment?.a_o_shader_error?.length > 0){
+        console.error(o_shader_program?.o_info_fragment?.a_o_shader_error)
+        throw new Error("shader could not compile, has errors!");
+    }
+    o_shader_program.o_program = o_gl.createProgram();
+    o_gl.attachShader(o_shader_program.o_program, o_shader_program?.o_info_fragment?.o_shader);
+    o_gl.attachShader(o_shader_program.o_program, o_shader_program?.o_info_vertex?.o_shader);
+    o_gl.linkProgram(o_shader_program.o_program);
 
-// just for the demo 
-// o_canvas.style.position = 'fixed';
-// o_canvas.style.width = '100vw';
-// o_canvas.style.height = '100vh';
-let f_resize = function(){
-    if(o_webgl_program){
-        // this will resize the canvas and also update 'o_scl_canvas'
-        f_resize_canvas_from_o_webgl_program(
-            o_webgl_program,
-            globalThis.innerWidth, 
-            globalThis.innerHeight
-        )
-    
-        o_webgl_program?.o_ctx.uniform2f(o_state.o_ufloc__iResolution,
-            globalThis.innerWidth, 
-            globalThis.innerHeight
-        );
-    
-        f_render_from_o_webgl_program(o_webgl_program);
+    if (!o_gl.getProgramParameter(o_shader_program.o_program, o_gl.LINK_STATUS)) {
+        console.error('Shader program linking error:', o_gl.getProgramInfoLog(o_shader_program.o_program));
     }
 }
 
-globalThis.addEventListener('resize', ()=>{
-    f_resize();
-});
 
-let n_id_raf = 0;
+let o_shader_program = a_o_shader_program[0].o_program;
+// // Use shader program
+o_gl.useProgram(o_shader_program);
 
+// Vertex data for a full-screen quad
+let a_n_vertex = [
+    -1.0, -1.0,
+     1.0, -1.0,
+    -1.0,  1.0,
+     1.0,  1.0
+];
 
-let mouseX = 0;
-let mouseY = 0;
-let clickX = 0;
-let clickY = 0;
-let isMouseDown = false;
+// Create buffer
+let o_buffer = o_gl.createBuffer();
+o_gl.bindBuffer(o_gl.ARRAY_BUFFER, o_buffer);
+o_gl.bufferData(o_gl.ARRAY_BUFFER, new Float32Array(a_n_vertex), o_gl.STATIC_DRAW);
 
-// Event listener for mouse move
-o_canvas.addEventListener('mousemove', (event) => {
-    mouseX = event.clientX;
-    mouseY = event.clientY;
-});
+// Bind vertex attribute
+let n_loc__position = o_gl.getAttribLocation(o_shader_program, 'a_position');
+o_gl.enableVertexAttribArray(n_loc__position);
+o_gl.vertexAttribPointer(n_loc__position, 2, o_gl.FLOAT, false, 0, 0);
 
-// Event listener for mouse down
-o_canvas.addEventListener('mousedown', (event) => {
-    isMouseDown = true;
-    clickX = event.clientX;
-    clickY = event.clientY;
-});
+// Set viewport size to 3x3 pixels
+o_gl.viewport(0, 0, 3, 3);
 
-// Event listener for mouse up
-o_canvas.addEventListener('mouseup', () => {
-    isMouseDown = false;
-});
+// Clear the canvas
+o_gl.clearColor(0.0, 0.0, 0.0, 1.0);
+o_gl.clear(o_gl.COLOR_BUFFER_BIT);
 
-let o_el_time = document.createElement('div');
-o_el_time.id = 'o_el_time'
-document.body.appendChild(o_el_time);
+// Draw the quad
+o_gl.drawArrays(o_gl.TRIANGLE_STRIP, 0, 4);
+//
 
-let n_ms_update_time_last = 0;
-let n_ms_update_time_delta_max = 1000;
-let f_raf = function(){
-
-    if(o_webgl_program){
-        let o_date = new Date();
-        let n_sec_of_the_day_because_utc_timestamp_does_not_fit_into_f32_value = (o_date.getTime()/1000.)%(60*60*24)
-        // n_sec_of_the_day_because_utc_timestamp_does_not_fit_into_f32_value = (60*60*24)-1 //test
-        o_webgl_program?.o_ctx.uniform4f(o_state.o_ufloc__iDate,
-            o_date.getUTCFullYear(),
-            o_date.getUTCMonth(), 
-            o_date.getUTCDate(),
-            n_sec_of_the_day_because_utc_timestamp_does_not_fit_into_f32_value
-        );
-        o_webgl_program?.o_ctx.uniform4f(o_state.o_ufloc__i_mouse,
-            isMouseDown ? mouseX : 0.0,
-            isMouseDown ? mouseY : 0.0,
-            clickX,
-            clickY
-        );
-        o_webgl_program?.o_ctx.uniform1f( o_state.o_ufloc__iTime,
-            n_sec_of_the_day_because_utc_timestamp_does_not_fit_into_f32_value
-        );
-       
-        let s_time = `${f_s_hms__from_n_ts_ms_utc(o_date.getTime(), 'UTC')}.${((o_date.getTime()/1000)%1).toFixed(3).split('.').pop()}`
-        o_el_time.innerText = `UTC: ${s_time}`
-    
-        let n_ms = globalThis.performance.now()
-        let n_ms_delta = Math.abs(n_ms_update_time_last - n_ms);
-        if(n_ms_delta > n_ms_update_time_delta_max){
-            document.title = `${s_time.split('.').shift()} Shader-Clock` 
-            n_ms_update_time_last = n_ms;
-        }
-        f_render_from_o_webgl_program(o_webgl_program);
-    }
-
-    n_id_raf = requestAnimationFrame(f_raf)
+let o_div = document;
+let o_state = f_o_proxified_and_add_listeners(
+    {
+        n_1: 0.5,
+    }, 
+    f_callback_beforevaluechange,
+    f_callback_aftervaluechange, 
+    o_div
+)
+// we dont put webgl stuff into the o_state
+let o_gpu_programs = {
 
 }
-n_id_raf = requestAnimationFrame(f_raf)
 
+globalThis.o_state = o_state
 
-let n_id_timeout = 0;
-globalThis.onpointermove = function(){
-    clearTimeout(n_id_timeout);
-    o_el_time.style.display = 'block'
-    n_id_timeout = setTimeout(()=>{
-        o_el_time.style.display = 'none'
-    },5000)
-}
-globalThis.onpointerdown = function(){
-    o_state.n_idx_a_o_shader = (o_state.n_idx_a_o_shader+1)% o_state.a_o_shader.length;
-    o_state.o_shader = o_state.a_o_shader[o_state.n_idx_a_o_shader]
-    f_update_shader();
-}
-f_update_shader()
-
-
-// Determine the current domain
-const s_hostname = globalThis.location.hostname;
-
-// Create the WebSocket URL, assuming ws for http and wss for https
-const s_protocol_ws = globalThis.location.protocol === 'https:' ? 'wss:' : 'ws:';
-const s_url_ws = `${s_protocol_ws}//${s_hostname}:${globalThis.location.port}`;
-
-// Create a new WebSocket instance
-const o_ws = new WebSocket(s_url_ws);
-
-// Set up event listeners for your WebSocket
-o_ws.onopen = function(o_e) {
-    console.log({
-        o_e, 
-        s: 'o_ws.onopen called'
-    })
-};
-
-o_ws.onerror = function(o_e) {
-    console.log({
-        o_e, 
-        s: 'o_ws.onerror called'
-    })
-};
-
-o_ws.onmessage = function(o_e) {
-    console.log({
-        o_e, 
-        s: 'o_ws.onmessage called'
-    })
-    o_state.a_o_msg.push(o_e.data);
-    o_state?.o_js__a_o_mod?._f_render();
-
-};
-globalThis.addEventListener('pointerdown', (o_e)=>{
-    o_ws.send('pointerdown on client')
-})
-
-
-document.body.appendChild(
-    await f_o_html__and_make_renderable(
-        {
-            style: "max-height: 30vh; overflow-y:scroll",
-            a_o: [
+// let f_sleep_ms = async function(n_ms){
+//     return new Promise((f_res, f_rej)=>{
+//         setTimeout(()=>{
+//             return f_res(true)
+//         },n_ms)
+//     })
+// }
+// then we build the html 
+let o = await f_o_html_from_o_js(
+    {
+        class: "test",
+        f_a_o: ()=>{
+            return [
+                
                 {
-                    innerText: "Hello",
+                    f_a_o:async ()=> [
+                        {
+                            innerText: "name is: staticaddedperson"
+                        },
+                    ],
+                    a_s_prop_sync: 'a_s_name',
                 },
-                o_mod_notifire.f_o_js(
-                    o_state.o_state_notifire
-                ),
-                Object.assign(
-                    o_state, 
-                    {
-                        o_js__a_n: {
-                            f_o_jsh: ()=>{
-                                return {
-                                    f_before_f_o_html__and_make_renderable: (v_o_html)=>{
-                                        console.log('f_before_f_o_html__and_make_renderable')
-                                        console.log(v_o_html)
-                                    },
-                                    f_after_f_o_html__and_make_renderable: (v_o_html)=>{
-                                        console.log('f_after_f_o_html__and_make_renderable')
-                                        console.log(v_o_html)
-                                    },
-                                    a_o: [
-                                        ...new Array(10).fill(0).map(n=>{
-                                            return {
-                                                s_tag: "input",
-                                                style: "width: 100%", 
-                                                value: `${n}: rand:${Math.random()}`
-                                            } 
-                                        })
-                                    ]
-                                }
-                            }
-                        }
-                    }
-                ).o_js__a_n
+            
             ]
         }
-    )
+    }, 
+    o_state
 )
-o_mod_notifire.f_o_throw_notification(o_state.o_state_notifire,'hello!')
+document.body.appendChild(o)
+document.body.appendChild(o_canvas);

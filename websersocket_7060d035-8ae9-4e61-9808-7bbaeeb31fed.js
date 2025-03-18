@@ -116,8 +116,8 @@ let s_name_host = Deno.hostname(); // or maybe some ip adress 112.35.8.13
 let b_development = s_name_host != 'the_server_name_here';
 let s_name_host2 = (b_development) ? 'localhost': s_name_host;
 // let o_info_certificates = {
-//     s_path_certificate_file: './self_signed_cert_e731d80d-dbe2-4a17-a153-7ea90604a8a3.crt',
-//     s_path_key_file: './self_signed_key_e731d80d-dbe2-4a17-a153-7ea90604a8a3.key'
+//     s_path_certificate_file: './self_signed_cert_7060d035-8ae9-4e61-9808-7bbaeeb31fed.crt',
+//     s_path_key_file: './self_signed_key_7060d035-8ae9-4e61-9808-7bbaeeb31fed.key'
 // }
 await f_websersocket_serve(
     [
