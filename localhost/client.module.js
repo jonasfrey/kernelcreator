@@ -167,7 +167,7 @@ let o_shader_program_display_shader = {
         if (n_b_invert == 1.0) {
             o_col.rgb = 1.0 - o_col.rgb; // Invert colors
         }
-        float n = length(modifiedTexCoord);
+        float n = length(modifiedTexCoord/3);
     
         gl_FragColor = vec4(n, 0.,0.,1.); // Output the final color
     }
@@ -181,7 +181,7 @@ let o_shader_program_display_shader = {
         v_texCoord = a_position.xy * 0.5 + 0.5;
     }
     `,
-    o_scl: [3,3],
+    o_scl: [1000,1000],
     o_info_vertex: null, 
     o_info_fragment: null, 
     o_program_shader: null,
@@ -192,7 +192,7 @@ let a_o_shader_program = [
 ]
 
 let f_compile_and_potentially_throw_error = function(s_type, s_source, o_gl, o_shader_program){
-    o_shader_program.o_info_vertex = f_o_shader_info_and_compile_shader(
+    o_shader_program[`o_info_${s_type}`] = f_o_shader_info_and_compile_shader(
         s_type, 
         s_source, 
         o_gl
@@ -205,8 +205,8 @@ let f_compile_and_potentially_throw_error = function(s_type, s_source, o_gl, o_s
     }
 }
 for(let o_shader_program of a_o_shader_program){
-    f_compile_and_potentially_throw_error('vertex',o_shader_program.s_vertex_shader_source, o_gl, o_shader_program);
-    f_compile_and_potentially_throw_error('fragment',o_shader_program.s_fragment_shader_source, o_gl, o_shader_program);
+    f_compile_and_potentially_throw_error('vertex',o_shader_program.s_vertex_shader_source, o_gl,o_shader_program);
+    f_compile_and_potentially_throw_error('fragment',o_shader_program.s_fragment_shader_source, o_gl,o_shader_program);
 
     o_shader_program.o_program = o_gl.createProgram();
     o_gl.attachShader(o_shader_program.o_program, o_shader_program?.o_info_fragment?.o_shader);
@@ -217,6 +217,7 @@ for(let o_shader_program of a_o_shader_program){
         console.error('Shader program linking error:', o_gl.getProgramInfoLog(o_shader_program.o_program));
     }
 }
+
 
 
 let o_div = document;
@@ -359,6 +360,8 @@ let f_render_pass = function(){
     // Set viewport size to 3x3 pixels
     o_canvas.width = o_shader_program.o_scl[0];
     o_canvas.height = o_shader_program.o_scl[1];
+    o_state.o_scl_canvas[0] = o_shader_program.o_scl[0];
+    o_state.o_scl_canvas[1] = o_shader_program.o_scl[1];
     o_gl.viewport(0, 0, o_canvas.width, o_canvas.height);
 
     // Clear the canvas
