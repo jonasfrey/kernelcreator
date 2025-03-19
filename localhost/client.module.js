@@ -46,12 +46,7 @@ f_add_css(
 
 
 let f_callback_beforevaluechange = function(a_s_path, v_old, v_new){
-    console.log('a_s_path')
-    console.log(a_s_path)
-    let s_path = a_s_path.join('.');
-    if(s_path == 'a_o_person.0.s_name'){
-        console.log('name of first person will be changed')
-    }
+
 }
 let f_callback_aftervaluechange = function(a_s_path, v_old, v_new){
 
@@ -90,35 +85,36 @@ let f_o_uniform_shared_cpu_gpu_variable = function(
         v_current_frame
     }
 }
-let o_uniform_shared_cpu_gpu_variable__n_ms_time = f_o_uniform_shared_cpu_gpu_variable(
-    'n_ms_time'
-);
-let o_uniform_shared_cpu_gpu_variable__n_b_mouse_down_left = f_o_uniform_shared_cpu_gpu_variable(
-    'n_b_mouse_down_left'
-);
-let o_uniform_shared_cpu_gpu_variable__n_b_mouse_down_middle = f_o_uniform_shared_cpu_gpu_variable(
-    'n_b_mouse_down_middle'
-);
-let o_uniform_shared_cpu_gpu_variable__n_b_mouse_down_right = f_o_uniform_shared_cpu_gpu_variable(
-    'n_b_mouse_down_right'
-);
-let o_uniform_shared_cpu_gpu_variable__o_trn_mouse = f_o_uniform_shared_cpu_gpu_variable(
-    'o_trn_mouse'
-);
-let o_uniform_shared_cpu_gpu_variable__o_scl_texture1 = f_o_uniform_shared_cpu_gpu_variable(
-    'o_scl_texture1'
-);
-let o_uniform_shared_cpu_gpu_variable__o_texture1 = f_o_uniform_shared_cpu_gpu_variable(
-    'o_texture1'
-);
-
+let o_uniform_shared_cpu_gpu_variable__n_ms_time = 
+    f_o_uniform_shared_cpu_gpu_variable('n_ms_time');
+let o_uniform_shared_cpu_gpu_variable__n_b_mouse_down_left = 
+    f_o_uniform_shared_cpu_gpu_variable('n_b_mouse_down_left');
+let o_uniform_shared_cpu_gpu_variable__n_b_mouse_down_middle = 
+    f_o_uniform_shared_cpu_gpu_variable('n_b_mouse_down_middle');
+let o_uniform_shared_cpu_gpu_variable__n_b_mouse_down_right = 
+    f_o_uniform_shared_cpu_gpu_variable('n_b_mouse_down_right');
+let o_uniform_shared_cpu_gpu_variable__o_trn_mouse_nor = 
+    f_o_uniform_shared_cpu_gpu_variable('o_trn_mouse_nor');
+let o_uniform_shared_cpu_gpu_variable__o_scl_texture1 = 
+    f_o_uniform_shared_cpu_gpu_variable('o_scl_texture1');
+let o_uniform_shared_cpu_gpu_variable__o_texture1 = 
+    f_o_uniform_shared_cpu_gpu_variable('o_texture1');
+let a_o_uniform_shared_cpu_gpu_variable = [
+    o_uniform_shared_cpu_gpu_variable__n_ms_time,
+    o_uniform_shared_cpu_gpu_variable__n_b_mouse_down_left,
+    o_uniform_shared_cpu_gpu_variable__n_b_mouse_down_middle,
+    o_uniform_shared_cpu_gpu_variable__n_b_mouse_down_right,
+    o_uniform_shared_cpu_gpu_variable__o_trn_mouse_nor,
+    o_uniform_shared_cpu_gpu_variable__o_scl_texture1,
+    o_uniform_shared_cpu_gpu_variable__o_texture1,
+]
 let o_shader_program_display_shader = {
     a_o_uniform_shared_cpu_gpu_variable: [
         o_uniform_shared_cpu_gpu_variable__n_ms_time,
         o_uniform_shared_cpu_gpu_variable__n_b_mouse_down_left,
         o_uniform_shared_cpu_gpu_variable__n_b_mouse_down_middle,
         o_uniform_shared_cpu_gpu_variable__n_b_mouse_down_right,
-        o_uniform_shared_cpu_gpu_variable__o_trn_mouse,
+        o_uniform_shared_cpu_gpu_variable__o_trn_mouse_nor,
         o_uniform_shared_cpu_gpu_variable__o_scl_texture1,
         o_uniform_shared_cpu_gpu_variable__o_texture1,
     ],
@@ -132,7 +128,7 @@ let o_shader_program_display_shader = {
     uniform float n_b_mouse_down_left;
     uniform float n_b_mouse_down_middle;
     uniform float n_b_mouse_down_right;
-    uniform vec2 o_trn_mouse;
+    uniform vec2 o_trn_mouse_nor;
     uniform float n_b_invert;
     uniform float n_b_mirror_vertical;
     uniform float n_b_mirror_horizontal;
@@ -171,8 +167,9 @@ let o_shader_program_display_shader = {
         if (n_b_invert == 1.0) {
             o_col.rgb = 1.0 - o_col.rgb; // Invert colors
         }
+        float n = length(modifiedTexCoord);
     
-        gl_FragColor = vec4(1.,0.,0.,1.); // Output the final color
+        gl_FragColor = vec4(n, 0.,0.,1.); // Output the final color
     }
     `, 
     s_vertex_shader_source: `
@@ -184,33 +181,33 @@ let o_shader_program_display_shader = {
         v_texCoord = a_position.xy * 0.5 + 0.5;
     }
     `,
+    o_scl: [3,3],
     o_info_vertex: null, 
     o_info_fragment: null, 
     o_program_shader: null,
 }
+
 let a_o_shader_program = [
     o_shader_program_display_shader,
 ]
 
-for(let o_shader_program of a_o_shader_program){
+let f_compile_and_potentially_throw_error = function(s_type, s_source, o_gl, o_shader_program){
     o_shader_program.o_info_vertex = f_o_shader_info_and_compile_shader(
-        'vertex', 
-        o_shader_program.s_vertex_shader_source, 
+        s_type, 
+        s_source, 
         o_gl
     );
     if(o_shader_program?.o_info_vertex?.a_o_shader_error?.length > 0){
-        console.error(o_shader_program?.o_info_vertex?.a_o_shader_error)
-        throw new Error("shader could not compile, has errors!");
+        for(let o_shader_error of o_shader_program?.o_info_vertex?.a_o_shader_error){
+            console.error(o_shader_error.s_rustlike_error)
+        }
+        // throw new Error("shader could not compile, has errors!");
     }
-    o_shader_program.o_info_fragment = f_o_shader_info_and_compile_shader(
-        'fragment', 
-        o_shader_program.s_fragment_shader_source, 
-        o_gl
-    );
-    if(o_shader_program?.o_info_fragment?.a_o_shader_error?.length > 0){
-        console.error(o_shader_program?.o_info_fragment?.a_o_shader_error)
-        throw new Error("shader could not compile, has errors!");
-    }
+}
+for(let o_shader_program of a_o_shader_program){
+    f_compile_and_potentially_throw_error('vertex',o_shader_program.s_vertex_shader_source, o_gl, o_shader_program);
+    f_compile_and_potentially_throw_error('fragment',o_shader_program.s_fragment_shader_source, o_gl, o_shader_program);
+
     o_shader_program.o_program = o_gl.createProgram();
     o_gl.attachShader(o_shader_program.o_program, o_shader_program?.o_info_fragment?.o_shader);
     o_gl.attachShader(o_shader_program.o_program, o_shader_program?.o_info_vertex?.o_shader);
@@ -222,47 +219,20 @@ for(let o_shader_program of a_o_shader_program){
 }
 
 
-// // switch the shader program
-let o_shader_program = o_shader_program_display_shader
-o_gl.useProgram(o_shader_program.o_program);
-
-// Vertex data for a full-screen quad
-let a_n_vertex = [
-    -1.0, -1.0,
-     1.0, -1.0,
-    -1.0,  1.0,
-     1.0,  1.0
-];
-
-// Create buffer
-let o_buffer = o_gl.createBuffer();
-o_gl.bindBuffer(o_gl.ARRAY_BUFFER, o_buffer);
-o_gl.bufferData(o_gl.ARRAY_BUFFER, new Float32Array(a_n_vertex), o_gl.STATIC_DRAW);
-
-// Bind vertex attribute
-let n_loc__position = o_gl.getAttribLocation(o_shader_program.o_program, 'a_position');
-o_gl.enableVertexAttribArray(n_loc__position);
-o_gl.vertexAttribPointer(n_loc__position, 2, o_gl.FLOAT, false, 0, 0);
-
-// Set viewport size to 3x3 pixels
-o_gl.viewport(0, 0, 3, 3);
-
-// Clear the canvas
-o_gl.clearColor(0.0, 0.0, 0.0, 1.0);
-o_gl.clear(o_gl.COLOR_BUFFER_BIT);
-
-// Draw the quad
-o_gl.drawArrays(o_gl.TRIANGLE_STRIP, 0, 4);
-//
-
 let o_div = document;
 let o_state = f_o_proxified_and_add_listeners(
     {
+        n_fps: 60,
+        n_id_raf: 0,
+        n_ms_last: 0,
+        n_ms_sum: 0,
+        n_ms_count: 0,
+
         o_scl_canvas: [0,0], 
         n_b_mouse_down_left: false,
         n_b_mouse_down_middle: false,
         n_b_mouse_down_right: false,
-        o_trn_mouse: [0,0], 
+        o_trn_mouse_nor: [0,0], 
         o_scl_texture1: [0,0], 
         o_texture1: [0,0],
         n_ms_time: 0
@@ -309,26 +279,118 @@ let o = await f_o_html_from_o_js(
 document.body.appendChild(o)
 document.body.appendChild(o_canvas);
 
-let f_render_pass = function(){
-
-    for(let o_)
+let f_pass_cpu_data_to_gpu = function(o_shader_program){
+    for(let o_uniform_shared_cpu_gpu_variable of o_shader_program.a_o_uniform_shared_cpu_gpu_variable){
+        if(o_uniform_shared_cpu_gpu_variable.v_current_frame != o_uniform_shared_cpu_gpu_variable.v_last_frame){
+            let v_new = o_uniform_shared_cpu_gpu_variable.v_current_frame;
+            if (typeof v_new === 'number') {
+                o_gl.uniform1f( 
+                    o_gl.getUniformLocation(
+                        o_shader_program.o_program, 
+                        o_uniform_shared_cpu_gpu_variable.s_name
+                    ),
+                    v_new
+                );
+            }
+            if (v_new?.length == 2) {
+                o_gl.uniform2f( 
+                    o_gl.getUniformLocation(
+                        o_shader_program.o_program, 
+                        o_uniform_shared_cpu_gpu_variable.s_name
+                    ),
+                    v_new[0],v_new[1] 
+                );
+            }
+            if (v_new?.length == 3) {
+                o_gl.uniform3f( 
+                    o_gl.getUniformLocation(
+                        o_shader_program.o_program, 
+                        o_uniform_shared_cpu_gpu_variable.s_name
+                    ),
+                    v_new[0],v_new[1],v_new[2]
+                );
+            }
+            if (v_new?.length == 4) {
+                o_gl.uniform4f( 
+                    o_gl.getUniformLocation(
+                        o_shader_program.o_program, 
+                        o_uniform_shared_cpu_gpu_variable.s_name
+                    ),
+                    v_new[0],v_new[1],v_new[2],v_new[3]
+                );
+            }
+        }
+    }
 }
 
-let n_id_raf = 0;
-let n_ms_last = 0;
-let n_ms_sum = 0;
-let n_ms_count = 0;
+let f_render_pass = function(){
+
+    // console.log('asdf')
+    for(let o_uniform_shared_cpu_gpu_variable of a_o_uniform_shared_cpu_gpu_variable){
+        let v = o_state[o_uniform_shared_cpu_gpu_variable.s_name];
+        if(v){
+            o_uniform_shared_cpu_gpu_variable.v_current_frame = v;
+        }
+    }
+
+    // // switch the shader program
+    let o_shader_program = o_shader_program_display_shader
+    o_gl.useProgram(o_shader_program.o_program);
+
+    // Vertex data for a full-screen quad
+    let a_n_vertex = [
+        -1.0, -1.0,
+        1.0, -1.0,
+        -1.0,  1.0,
+        1.0,  1.0
+    ];
+
+    f_pass_cpu_data_to_gpu(o_shader_program);
+    // Create buffer
+    let o_buffer = o_gl.createBuffer();
+    o_gl.bindBuffer(o_gl.ARRAY_BUFFER, o_buffer);
+    o_gl.bufferData(o_gl.ARRAY_BUFFER, new Float32Array(a_n_vertex), o_gl.STATIC_DRAW);
+
+    // Bind vertex attribute
+    let n_loc__position = o_gl.getAttribLocation(o_shader_program.o_program, 'a_position');
+    o_gl.enableVertexAttribArray(n_loc__position);
+    o_gl.vertexAttribPointer(n_loc__position, 2, o_gl.FLOAT, false, 0, 0);
+
+    // Set viewport size to 3x3 pixels
+    o_canvas.width = o_shader_program.o_scl[0];
+    o_canvas.height = o_shader_program.o_scl[1];
+    o_gl.viewport(0, 0, o_canvas.width, o_canvas.height);
+
+    // Clear the canvas
+    o_gl.clearColor(0.0, 0.0, 0.0, 1.0);
+    o_gl.clear(o_gl.COLOR_BUFFER_BIT);
+
+    // Draw the quad
+    o_gl.drawArrays(o_gl.TRIANGLE_STRIP, 0, 4);
+    //
+
+
+
+    for(let o_uniform_shared_cpu_gpu_variable of a_o_uniform_shared_cpu_gpu_variable){
+        let v = o_state[o_uniform_shared_cpu_gpu_variable.s_name];
+        if(v){
+            o_uniform_shared_cpu_gpu_variable.v_last_frame = o_uniform_shared_cpu_gpu_variable.v_current_frame;
+        }
+    }
+}
+
+
 let f_raf = function(n_ms){
 
 
     // ------------- performance measuring: start
-    let n_ms_delta = n_ms-n_ms_last;
-    n_ms_sum = parseFloat(n_ms_sum) + parseFloat(n_ms_delta);
-    n_ms_count+=1;
-    if(n_ms_sum > 1000){
-        // console.log(`n_fps ${1000/(n_ms_sum/n_ms_count)}`)
-        n_ms_sum= 0;
-        n_ms_count= 0;
+    let n_ms_delta = n_ms-o_state.n_ms_last;
+    o_state.n_ms_sum = parseFloat(o_state.n_ms_sum) + parseFloat(n_ms_delta);
+    o_state.n_ms_count+=1;
+    if(o_state.n_ms_sum > 1000){
+        // console.log(`n_fps ${1000/(o_state.n_ms_sum/o_state.n_ms_count)}`)
+        o_state.n_ms_sum= 0;
+        o_state.n_ms_count= 0;
     }
 
     // ------------- performance measuring: end
@@ -336,16 +398,44 @@ let f_raf = function(n_ms){
 
     // console.log(globalThis.performance.now())
     if(n_ms_delta > (1000/o_state.n_fps)){
-        o_state.n_ms_time =  globalThis.performance.now();
+        o_state.n_ms_time = globalThis.performance.now();
         f_render_pass();
-        n_ms_last = n_ms
+        o_state.n_ms_last = n_ms
 
     }
 
-    n_id_raf = requestAnimationFrame(f_raf)
+    o_state.n_id_raf = requestAnimationFrame(f_raf)
 
 }
-n_id_raf = requestAnimationFrame(f_raf)
 
 
+
+let f_start_animation = function(){
+    o_state.n_id_raf = requestAnimationFrame(f_raf)
+}
+let f_stop_animation = function(){
+    o_state.n_id_raf = cancelAnimationFrame(o_state.n_id_raf)
+}
+
+f_start_animation();
+
+window.onmousedown = function(
+    o_e
+){
+    let s_button = ['left', 'middle', 'right'][o_e.button];
+    o_state[`n_b_mouse_down_${s_button}`] = 1
+}
+window.onmouseup = function(
+    o_e
+){
+    o_state[`n_b_mouse_down_left`] = 0
+    o_state[`n_b_mouse_down_middle`] = 0
+    o_state[`n_b_mouse_down_right`] = 0
+}
+window.onmousemove = function(o_e){
+    o_state.o_trn_mouse_nor = [
+        o_e.clientX/window.innerWidth,
+        o_e.clientY/window.innerHeight
+    ];
+}
 
